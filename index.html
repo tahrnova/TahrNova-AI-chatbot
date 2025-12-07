@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TahrNova Chatbot Demo</title>
+  <style>
+    :root{
+      --grad-start:#2aa0ff;
+      --grad-end:#4b16d8;
+      --lux-bg:#07102a;
+      --card:#0f1724;
+      --muted:#9aa7bf;
+      --accent:#0ea5ff;
+    }
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; margin:0; background:#f6f8fb;}
+    /* widget container */
+    .tn-chat-btn{
+      position:fixed; right:24px; bottom:24px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end;
+    }
+    .tn-launch {
+      display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:999px;
+      background: linear-gradient(90deg,var(--grad-start),var(--grad-end)); color:white; box-shadow:0 8px 24px rgba(41, 61, 97, 0.18);
+      cursor:pointer; border:none;
+    }
+    .tn-launch img{height:28px; width:28px; border-radius:6px;}
+    .tn-window {
+      width:360px; max-width:calc(100vw - 40px); height:520px; border-radius:14px;
+      box-shadow:0 20px 60px rgba(11,17,30,0.35); overflow:hidden; margin-bottom:12px;
+      background:linear-gradient(180deg, #0b1220 0%, #07102a 100%);
+      color:#e6eef8; display:flex; flex-direction:column;
+    }
+    .tn-header{display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.04);}
+    .tn-header img{height:44px; width:44px; border-radius:8px; background:white; padding:6px;}
+    .tn-title{font-weight:600; font-size:15px}
+    .tn-sub{font-size:12px; color:var(--muted)}
+    .tn-body{flex:1; padding:12px; overflow:auto; display:flex; flex-direction:column; gap:8px;}
+    .tn-message{max-width:78%; padding:10px 12px; border-radius:12px; font-size:14px; line-height:1.35;}
+    .tn-msg-bot{background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); align-self:flex-start;}
+    .tn-msg-user{background:#08324c; align-self:flex-end; color:#dff4ff;}
+    .tn-cta{padding:10px; display:flex; gap:8px; align-items:center; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.03);}
+    .tn-input{flex:1; display:flex; gap:8px; align-items:center;}
+    .tn-input input{flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:transparent; color: #e6eef8;}
+    .tn-send{background:var(--grad-start); border:none; color:white; padding:9px 12px; border-radius:10px; cursor:pointer;}
+    .tn-link{display:inline-block; background:transparent; color:var(--accent); text-decoration:underline; font-size:13px}
+    .tn-suggestion{background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:8px; display:inline-block; cursor:pointer; font-size:13px; margin:4px 4px 0 0;}
+    .tn-footer {font-size:12px; color:var(--muted); padding:10px 12px; text-align:center; border-top:1px solid rgba(255,255,255,0.03);}
+    /* small screens */
+    @media (max-width:420px){ .tn-window{width:320px; height:480px} .tn-launch{padding:10px 12px} }
+  </style>
+</head>
+<body>
+
+  <div class="tn-chat-btn" id="tn-root">
+    <!-- Chat window (hidden until opened) -->
+    <div class="tn-window" id="tn-window" style="display:none;">
+      <div class="tn-header">
+        <img src="tahrnova 2.png" alt="TahrNova Logo" />
+        <div>
+          <div class="tn-title">TahrNova — AI Assistant</div>
+          <div class="tn-sub">Design. Develop. Grow. • Premium AI automation for clinics</div>
+        </div>
+      </div>
+
+      <div class="tn-body" id="tn-body">
+        <!-- messages will appear here -->
+      </div>
+
+      <div style="padding:8px 12px; border-top:1px solid rgba(255,255,255,0.03);">
+        <div>
+          <span class="tn-suggestion" data-q="Will you design?">Will you design?</span>
+          <span class="tn-suggestion" data-q="What services do you offer?">What services?</span>
+          <span class="tn-suggestion" data-q="How much does it cost?">Pricing</span>
+        </div>
+      </div>
+
+      <div class="tn-cta">
+        <div class="tn-input">
+          <input id="tn-input" placeholder="Ask me anything — e.g. 'Do you build websites?'" />
+        </div>
+        <button class="tn-send" id="tn-send">Send</button>
+      </div>
+
+      <div class="tn-footer">
+        <div>Prefer live demo? <a class="tn-link" href="https://calendly.com/tahrnovaoffical/new-meeting" target="_blank">Book a demo</a> • Email: <a class="tn-link" href="mailto:tahrnovaoffical@gmail.com">tahrnovaoffical@gmail.com</a></div>
+      </div>
+    </div>
+
+    <!-- launch button -->
+    <button class="tn-launch" id="tn-launch" title="Chat with TahrNova">
+      <img src="tahrnova 2.png" alt="logo"/>
+      <div>
+        <div style="font-weight:600">Talk to Nova</div>
+        <div style="font-size:12px; opacity:0.9">AI assistant — TahrNova</div>
+      </div>
+    </button>
+  </div>
+
+  <script>
+    // Simple chatbot logic — keyword-based intent matching
+    (function(){
+      const root = document.getElementById('tn-root');
+      const win = document.getElementById('tn-window');
+      const launch = document.getElementById('tn-launch');
+      const body = document.getElementById('tn-body');
+      const input = document.getElementById('tn-input');
+      const send = document.getElementById('tn-send');
+
+      const CALENDLY = "https://calendly.com/tahrnovaoffical/new-meeting";
+      const EMAIL = "tahrnovaoffical@gmail.com";
+      const TAG = "Design. Develop. Grow.";
+
+      // Services list (based on your company capabilities)
+      const SERVICES = [
+        "AI Automation for Clinics (WhatsApp automation, auto follow-ups, appointment management)",
+        "Custom Website Design & Development (Next.js / React)",
+        "Mobile App Development (Flutter / React Native)",
+        "AI Chatbot & CRM Integration",
+        "Digital Marketing & Branding (Ads, Social, SEO)",
+        "Healthcare Software Solutions (EMR/Patient portals)",
+        "Appointment Booking Systems & Calendars",
+        "Patient Retention & Re-engagement Systems",
+        "Case Studies, Demos & Pilot Projects"
+      ];
+
+      // helper to append message
+      function addMessage(text, who='bot'){
+        const el = document.createElement('div');
+        el.className = 'tn-message ' + (who==='user' ? 'tn-msg-user' : 'tn-msg-bot');
+        el.innerHTML = text;
+        body.appendChild(el);
+        body.scrollTop = body.scrollHeight;
+      }
+
+      // initial greeting message
+      function initialGreeting(){
+        addMessage(`<strong>Hello 👋 I’m Nova — TahrNova's AI assistant.</strong><br/>
+        ${TAG} <br/><br/>
+        I help clinics and businesses increase bookings, automate patient follow-ups and grow revenue. Ask me about our services, pricing, or book a demo.`);
+        // suggest next steps
+        setTimeout(()=> {
+          addMessage(`Try: <em>"Will you design?"</em> • <em>"What services do you offer?"</em> • <em>"How much does it cost?"</em>`);
+        }, 400);
+      }
+
+      // Core response logic
+      function respondTo(message){
+        const m = message.toLowerCase();
+
+        // check for greetings
+        if(/^(hi|hello|hey|assalam|salaam)\b/.test(m)){
+          addMessage("Hi! How can I help you today? You can ask about services, pricing, or book a demo.");
+          return;
+        }
+
+        // "will you design" intent
+        if(m.includes("will you design") || (m.includes("will") && m.includes("design")) || m.includes("do you design") || m.includes("can you design")){
+          addMessage(`<strong>Yes — we design.</strong> We offer professional, clinic-focused designs (landing pages, booking portals & patient dashboards). Would you like to <a href="${CALENDLY}" target="_blank" class="tn-link">book a 15-min demo</a> or get a free audit via email (<a href="mailto:${EMAIL}" class="tn-link">${EMAIL}</a>)?`);
+          return;
+        }
+
+        // ask about services
+        if(m.includes("service") || m.includes("services") || m.includes("what do you") || m.includes("offer") || m.includes("provide")){
+          let list = "<ul style='margin:6px 0 6px 18px; color:#dff4ff'>";
+          SERVICES.forEach(s=> list += `<li>${s}</li>`);
+          list += "</ul>";
+          addMessage(`<strong>We provide the following services:</strong> ${list} <br/>If you'd like a tailored package, type <em>“custom package”</em> or book a quick demo: <a class="tn-link" href="${CALENDLY}" target="_blank">Book Demo</a>.`);
+          return;
+        }
+
+        // pricing related
+        if(m.includes("price") || m.includes("cost") || m.includes("how much") || m.includes("pricing")){
+          addMessage(`Our pricing is <strong>contract-based</strong> and depends on scope — we build custom packages to fit clinic size and goals (pilot, monthly retainer, or project). For an exact quote we recommend a 15-min demo: <a href="${CALENDLY}" class="tn-link" target="_blank">Book here</a> or email <a href="mailto:${EMAIL}" class="tn-link">${EMAIL}</a>.`);
+          return;
+        }
+
+        // request to book demo or schedule
+        if(m.includes("demo") || m.includes("book") || m.includes("schedule") || m.includes("call")){
+          addMessage(`Great — you can book a demo directly here: <a href="${CALENDLY}" class="tn-link" target="_blank">${CALENDLY}</a> or share your preferred time and email and we'll confirm.`);
+          return;
+        }
+
+        // contact
+        if(m.includes("email") || m.includes("contact") || m.includes("whatsapp") || m.includes("phone")){
+          addMessage(`Contact us at <a href="mailto:${EMAIL}" class="tn-link">${EMAIL}</a>. For quick demos use: <a href="${CALENDLY}" class="tn-link" target="_blank">Book Demo</a>.`);
+          return;
+        }
+
+        // if user asks general question about building app/website/ai
+        if(m.includes("app") || m.includes("mobile") || m.includes("website") || m.includes("web") || m.includes("chatbot") || m.includes("ai")){
+          addMessage(`We build websites (Next.js), mobile apps (Flutter), and AI chatbots. Would you like a quick example/demo tailored to your clinic? Book a 15-min call: <a href="${CALENDLY}" class="tn-link" target="_blank">Book Demo</a>`);
+          return;
+        }
+
+        // fallback: offer options and human handoff
+        addMessage(`I can: <br/>
+          1) Show services we provide <br/>
+          2) Schedule a demo (<a class="tn-link" href="${CALENDLY}" target="_blank">Book</a>) <br/>
+          3) Send a proposal via email (<a class="tn-link" href="mailto:${EMAIL}">${EMAIL}</a>)<br/>
+          Type "1", "2" or "3", or ask your question in plain English.`);
+      }
+
+      // open/close
+      launch.addEventListener('click', ()=>{
+        if(win.style.display === 'none' || win.style.display === ''){
+          win.style.display = 'flex';
+          launch.style.display = 'none';
+          setTimeout(()=> { initialGreeting(); }, 250);
+        }
+      });
+
+      // send message
+      send.addEventListener('click', ()=> {
+        const text = input.value.trim();
+        if(!text) return;
+        addMessage(text, 'user');
+        input.value = '';
+        setTimeout(()=> respondTo(text), 450);
+      });
+
+      input.addEventListener('keydown', (e)=> {
+        if(e.key === 'Enter'){ e.preventDefault(); send.click(); }
+      });
+
+      // suggestion buttons
+      document.querySelectorAll('.tn-suggestion').forEach(s=>{
+        s.addEventListener('click', ()=> {
+          const q = s.getAttribute('data-q');
+          addMessage(q, 'user');
+          setTimeout(()=> respondTo(q), 300);
+        });
+      });
+
+      // allow simple numeric responses for options
+      const observer = new MutationObserver(()=> {
+        // not used now — placeholder for future extension
+      });
+      observer.observe(body, {childList:true, subtree:true});
+
+    })();
+  </script>
+
+</body>
+</html> 
